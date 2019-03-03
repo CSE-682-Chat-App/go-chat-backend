@@ -1,35 +1,29 @@
-# Setup (To run locally)
+# Install and Run
 
-Clone the repository to `$GOPATH/src`
+### Checkout
+Check the file out to the directory: `$GOPATH/src/github.com/CSE-682-Chat-App/go-chat-backend`
 
-### Example
-```bash
-> cd $GOPATH/src
-> git clone git@github.com:CSE-682-Chat-App/go-chat-backend.git
+### Install
+```
+go install ./...
 ```
 
-# Running Local
-
-From the repository run `go install` and then execute the binary
-
-### Example
-```bash
-> cd $GOPATH/src/go-chat-backend
-> go get ./...
-> go install ./...
-> $GOPATH/bin/server
-INFO[0000] Starting Server on port 9090
+### Run
+```
+go-chat-backend
 ```
 
-# Bundling and Running the Container
 
-Build the docker container
+# Container
 
-### Example
-```bash
-> docker build -t go-chat-backend .
-> docker run -it -p 9090:9090 go-chat-backend
-INFO[0000] Starting Server on port 9090
+
+### Build
+```
+docker build -t go-chat-backend .
 ```
 
-You can then open your browser to: `http://localhost:9090` and you should see a default response.
+### Run
+
+```
+docker run -p 8080:8080 go-chat-backend
+```
