@@ -1,6 +1,8 @@
 package authorization
 
+//User is an authorized user
 type User struct {
+	UUID       string
 	Name       string
 	token      string
 	authorized bool
@@ -9,6 +11,7 @@ type User struct {
 //CheckCredentials checks whether the given credentials is authorized
 func (u *User) CheckCredentials(user string, password string) bool {
 	if user == "test" && password == "test" {
+		u.UUID = "1234"
 		u.authorized = true
 	}
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -75,7 +76,14 @@ func (c *Client) readMessage() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+
+		m := NewMessage()
+
+		json.Unmarshal(message, m)
+
+		m.SetSender(c)
+
+		c.hub.Handle(m, c)
 	}
 }
 
@@ -93,6 +101,7 @@ func (c *Client) writeMessage() {
 	for {
 		select {
 		case message, ok := <-c.send:
+			log.Println(message)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
