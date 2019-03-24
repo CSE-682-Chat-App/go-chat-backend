@@ -1,8 +1,8 @@
-package main
+package websocket
 
 import (
-// "encoding/json"
-// "log"
+	// "encoding/json"
+	"log"
 )
 
 // Hub maintains the set of active clients and broadcasts messages to the
@@ -23,7 +23,7 @@ type Hub struct {
 	messageCallbacks map[string][]onCallback
 }
 
-func newHub() *Hub {
+func New() *Hub {
 	return &Hub{
 		broadcast:        make(chan *Message),
 		register:         make(chan *Client),
@@ -42,6 +42,7 @@ func (h *Hub) On(path string, cb onCallback) {
 
 //Handle calls all the handlers for a path
 func (h *Hub) Handle(m *Message, c *Client) {
+	log.Println(*m)
 	if cbs, ok := h.messageCallbacks[m.Path]; ok {
 		for _, cb := range cbs {
 			cb(m, h, c)
@@ -49,7 +50,7 @@ func (h *Hub) Handle(m *Message, c *Client) {
 	}
 }
 
-func (h *Hub) run() {
+func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
@@ -57,7 +58,7 @@ func (h *Hub) run() {
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
-				close(client.send)
+				close(client.Send)
 			}
 		case message := <-h.broadcast:
 			for client := range h.clients {
@@ -69,9 +70,9 @@ func (h *Hub) run() {
 				}
 
 				select {
-				case client.send <- message.ToByte():
+				case client.Send <- message.ToByte():
 				default:
-					close(client.send)
+					close(client.Send)
 					delete(h.clients, client)
 				}
 			}

@@ -1,14 +1,12 @@
-package main
+package websocket
 
 import (
 	"bytes"
 	"encoding/json"
+	ws "github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"time"
-
-	authorization "github.com/CSE-682-Chat-App/go-chat-backend/pkg/authorization"
-	"github.com/gorilla/websocket"
 )
 
 const (
@@ -30,7 +28,7 @@ var (
 	space   = []byte{' '}
 )
 
-var upgrader = websocket.Upgrader{
+var upgrader = ws.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
@@ -45,13 +43,13 @@ type Client struct {
 	hub *Hub
 
 	// The websocket connection.
-	conn *websocket.Conn
+	conn *ws.Conn
 
 	// Buffered channel of outbound messages.
-	send chan []byte
+	Send chan []byte
 
 	// User for the session
-	User *authorization.User
+	User interface{}
 }
 
 // readMessage pumps messages from the websocket connection to the hub.
@@ -70,7 +68,7 @@ func (c *Client) readMessage() {
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if ws.IsUnexpectedCloseError(err, ws.CloseGoingAway, ws.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
@@ -100,26 +98,26 @@ func (c *Client) writeMessage() {
 	}()
 	for {
 		select {
-		case message, ok := <-c.send:
+		case message, ok := <-c.Send:
 			log.Println(message)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.conn.WriteMessage(ws.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
+			w, err := c.conn.NextWriter(ws.TextMessage)
 			if err != nil {
 				return
 			}
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
+			n := len(c.Send)
 			for i := 0; i < n; i++ {
 				w.Write(newline)
-				w.Write(<-c.send)
+				w.Write(<-c.Send)
 			}
 
 			if err := w.Close(); err != nil {
@@ -127,7 +125,7 @@ func (c *Client) writeMessage() {
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if err := c.conn.WriteMessage(ws.PingMessage, nil); err != nil {
 				return
 			}
 		}
@@ -135,9 +133,7 @@ func (c *Client) writeMessage() {
 }
 
 // serveWs handles websocket requests from the peer.
-func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	user := &authorization.User{}
-
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	//Upgrade the connection to a socket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -146,7 +142,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Use this to register more info about the user. Handle authenticating session, etc
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256), User: user}
+	client := &Client{hub: hub, conn: conn, Send: make(chan []byte, 256)}
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in

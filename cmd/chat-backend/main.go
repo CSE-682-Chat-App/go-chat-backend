@@ -1,51 +1,22 @@
 package main
 
 import (
+	"github.com/CSE-682-Chat-App/go-chat-backend/internal/pkg/websocket"
+	auth "github.com/CSE-682-Chat-App/go-chat-backend/pkg/authorization"
 	"log"
 	"net/http"
-	"strconv"
 )
 
 func main() {
-	hub := newHub()
-	go hub.run()
+	hub := websocket.New()
+	go hub.Run()
 
 	http.HandleFunc("/socket", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		websocket.ServeWs(hub, w, r)
 	})
 
-	hub.On("/message", func(m *Message, h *Hub, c *Client) {
-		if !c.User.IsAuthorized() {
-			return
-		}
-
-		log.Println("Message Received", m.Path, m.Data)
-
-		//Broadcast the message to everyone but sender
-		response := &Message{
-			Path: "/message",
-			Data: map[string]string{
-				"message": m.Data["message"],
-			},
-			// sender: c, //Uncomment to exclude the sender
-		}
-
-		h.broadcast <- response
-	})
-
-	hub.On("/signin", func(m *Message, h *Hub, c *Client) {
-		c.User.CheckCredentials(m.Data["username"], m.Data["password"])
-
-		response := &Message{
-			Path: "/authStatusChanged",
-			Data: map[string]string{
-				"isAuthorized": strconv.FormatBool(c.User.IsAuthorized()),
-			},
-		}
-
-		//Send the response just to the recipient
-		c.send <- response.ToByte()
-	})
+	hub.On("/auth", auth.Authenticate)
+	hub.On("/signup", auth.Signup)
 
 	log.Println("Serving at localhost:8080...")
 	log.Fatal(http.ListenAndServe(":8080", nil))

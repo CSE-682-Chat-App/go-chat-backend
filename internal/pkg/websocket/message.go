@@ -1,4 +1,4 @@
-package main
+package websocket
 
 import (
 	"encoding/json"
@@ -11,6 +11,14 @@ type Message struct {
 
 	recepients []*Client
 	sender     *Client
+}
+
+//Get returns the value from the data set
+func (m *Message) Get(k string) string {
+	if val, ok := m.Data[k]; ok {
+		return val
+	}
+	return ""
 }
 
 //NewMessage returns a new Message Struct
