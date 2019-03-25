@@ -99,7 +99,6 @@ func (c *Client) writeMessage() {
 	for {
 		select {
 		case message, ok := <-c.Send:
-			log.Println(message)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
