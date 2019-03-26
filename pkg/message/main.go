@@ -9,10 +9,23 @@ import (
 	"time"
 )
 
+type Timestamp struct {
+	time.Time
+}
+
+func (t Timestamp) MarshalJSON() ([]byte, error) {
+	log.Println(t)
+	return []byte(fmt.Sprintf("\"%s\"", t.Format("2006-01-02 15:04:05"))), nil
+}
+func (t Timestamp) UnmarshalJSON(b []byte) error {
+	log.Println(t)
+	return nil
+}
+
 type ChatMessage struct {
 	Message   string     `json:"message"`
 	Sender    *auth.User `json:"sender"`
-	Timestamp time.Time  `json:"timestamp"`
+	Timestamp Timestamp  `json:"timestamp"`
 }
 
 func (m *ChatMessage) ToString() string {
@@ -24,8 +37,19 @@ func (m *ChatMessage) ToString() string {
 	return string(str)
 }
 
-var channelMessages = map[string][]*ChatMessage{}
+var channelMessages = map[string][]*ChatMessage{
+	"general": []*ChatMessage{},
+}
 var channelUsers = map[string][]*auth.User{}
+
+func messagesJson(channel string) string {
+	str, err := json.Marshal(channelMessages[channel])
+	if err != nil {
+		log.Println(err)
+		return "[]"
+	}
+	return string(str)
+}
 
 func JoinChannel(m *ws.Message, h *ws.Hub, c *ws.Client) {
 	user := c.User.(*auth.User)
@@ -39,9 +63,19 @@ func JoinChannel(m *ws.Message, h *ws.Hub, c *ws.Client) {
 			Name: "System",
 			UUID: "0",
 		},
-		Timestamp: time.Now(),
+		Timestamp: Timestamp{time.Now()},
 	}
 
+	//Send the user the backlog of messages
+	joinedResponse := &ws.Message{
+		Path: fmt.Sprintf("/joined/%s", channel),
+		Data: map[string]string{
+			"messages": messagesJson(channel),
+		},
+	}
+	c.Send <- joinedResponse.ToByte()
+
+	//Broadcast that the user joined
 	response := &ws.Message{
 		Path: fmt.Sprintf("/message/%s", channel),
 		Data: map[string]string{
@@ -69,7 +103,7 @@ func LeaveChannel(m *ws.Message, h *ws.Hub, c *ws.Client) {
 			Name: "System",
 			UUID: "0",
 		},
-		Timestamp: time.Now(),
+		Timestamp: Timestamp{time.Now()},
 	}
 
 	response := &ws.Message{
@@ -94,7 +128,7 @@ func OnMessage(m *ws.Message, h *ws.Hub, c *ws.Client) {
 	message := &ChatMessage{
 		Message:   m.Get("message"),
 		Sender:    user,
-		Timestamp: time.Now(),
+		Timestamp: Timestamp{time.Now()},
 	}
 
 	channelMessages[channel] = append(channelMessages[channel], message)

@@ -27,15 +27,25 @@ func (u *User) ToString() string {
 }
 
 var users = map[string]*User{
-	"test": &User{
+	"Sebastian": &User{
 		UUID:     uuid.New().String(),
-		Name:     "test",
-		password: "test",
+		Name:     "Sebastian",
+		password: "password",
 	},
-	"test2": &User{
+	"Andrew": &User{
 		UUID:     uuid.New().String(),
-		Name:     "test2",
-		password: "test",
+		Name:     "Andrew",
+		password: "password",
+	},
+	"Ron": &User{
+		UUID:     uuid.New().String(),
+		Name:     "Ron",
+		password: "password",
+	},
+	"Chris": &User{
+		UUID:     uuid.New().String(),
+		Name:     "Chris",
+		password: "password",
 	},
 }
 
@@ -55,6 +65,35 @@ func GetUser(m *ws.Message, h *ws.Hub, c *ws.Client) {
 	}
 
 	c.Send <- response.ToByte()
+}
+
+func usersJSON() string {
+	us := make([]*User, len(users))
+
+	i := 0
+	for _, v := range users {
+		us[i] = v
+		i++
+	}
+
+	str, err := json.Marshal(us)
+	if err != nil {
+		log.Println(err)
+		return "[]"
+	}
+	return string(str)
+}
+func GetUsers(m *ws.Message, h *ws.Hub, c *ws.Client) {
+	//Send the user the backlog of messages
+	usersResponse := &ws.Message{
+		Path: fmt.Sprintf("/users"),
+		Data: map[string]string{
+			"users": usersJSON(),
+		},
+	}
+
+	log.Println(usersResponse)
+	c.Send <- usersResponse.ToByte()
 }
 
 func Signup(m *ws.Message, h *ws.Hub, c *ws.Client) {

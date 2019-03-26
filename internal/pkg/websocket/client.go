@@ -133,6 +133,8 @@ func (c *Client) writeMessage() {
 
 // serveWs handles websocket requests from the peer.
 func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	log.Println("Client connected")
+
 	//Upgrade the connection to a socket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {

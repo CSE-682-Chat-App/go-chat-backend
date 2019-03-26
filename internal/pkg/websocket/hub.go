@@ -62,7 +62,7 @@ func (h *Hub) Run() {
 		case message := <-h.Broadcast:
 			for client := range h.clients {
 				if message.WasSentBy(client) {
-					break
+					continue
 				}
 
 				select {

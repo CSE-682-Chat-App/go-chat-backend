@@ -19,6 +19,7 @@ func main() {
 	hub.On("/auth", auth.Authenticate)
 	hub.On("/signup", auth.Signup)
 	hub.On("/user", auth.AuthMiddleware(auth.GetUser))
+	hub.On("/users", auth.AuthMiddleware(auth.GetUsers))
 	hub.On("/join", auth.AuthMiddleware(message.JoinChannel))
 	hub.On("/leave", auth.AuthMiddleware(message.LeaveChannel))
 
